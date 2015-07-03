@@ -16,8 +16,10 @@
 
 package org.intellij.erlang.eunit.ui;
 
+import com.intellij.openapi.fileChooser.FileChooserDescriptorFactory;
 import com.intellij.openapi.options.ConfigurationException;
 import com.intellij.openapi.roots.ui.configuration.ModulesCombobox;
+import com.intellij.openapi.ui.TextFieldWithBrowseButton;
 import com.intellij.openapi.util.text.StringUtil;
 import com.intellij.ui.HideableTitledPanel;
 import com.intellij.ui.ListCellRendererWrapper;
@@ -43,6 +45,8 @@ public class ErlangUnitRunConfigurationEditorForm extends ErlangDebuggableRunCon
   private JLabel myErlangFunctionsLabel;
   private JComboBox myTestKindComboBox;
   private HideableTitledPanel myDebugOptionsHideablePanel;
+  private TextFieldWithBrowseButton myWorkingDirectoryComponent;
+  private JLabel myErlangWorkingDirLabel;
 
   public ErlangUnitRunConfigurationEditorForm() {
     myTestKindComboBox.addActionListener(new ActionListener() {
@@ -51,6 +55,7 @@ public class ErlangUnitRunConfigurationEditorForm extends ErlangDebuggableRunCon
         onTestKindSwitch();
       }
     });
+    myWorkingDirectoryComponent.addBrowseFolderListener("Choose working directory", "", null, FileChooserDescriptorFactory.createSingleFolderDescriptor());
   }
 
   @Override
@@ -111,7 +116,11 @@ public class ErlangUnitRunConfigurationEditorForm extends ErlangDebuggableRunCon
   private static ListCellRendererWrapper<ErlangUnitRunConfiguration.ErlangUnitRunConfigurationKind> getTestKindListCellRendererWrapper() {
     return new ListCellRendererWrapper<ErlangUnitRunConfiguration.ErlangUnitRunConfigurationKind>() {
       @Override
-      public void customize(JList list, ErlangUnitRunConfiguration.ErlangUnitRunConfigurationKind kind, int index, boolean selected, boolean hasFocus) {
+      public void customize(JList list,
+                            ErlangUnitRunConfiguration.ErlangUnitRunConfigurationKind kind,
+                            int index,
+                            boolean selected,
+                            boolean hasFocus) {
         if (kind != null) {
           String kindName = StringUtil.capitalize(kind.toString().toLowerCase());
           setText(kindName);

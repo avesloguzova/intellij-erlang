@@ -20,6 +20,7 @@ import com.intellij.execution.ExecutionException;
 import com.intellij.execution.Executor;
 import com.intellij.execution.configurations.ConfigurationFactory;
 import com.intellij.execution.configurations.ModuleBasedConfiguration;
+import com.intellij.execution.configurations.RuntimeConfigurationError;
 import com.intellij.execution.configurations.RuntimeConfigurationException;
 import com.intellij.execution.runners.ExecutionEnvironment;
 import com.intellij.execution.runners.RunConfigurationWithSuppressedDefaultRunAction;
@@ -32,6 +33,7 @@ import org.jdom.Element;
 import org.jetbrains.annotations.NotNull;
 import org.jetbrains.annotations.Nullable;
 
+import java.io.File;
 import java.io.Serializable;
 import java.util.Arrays;
 import java.util.Collection;
@@ -41,6 +43,7 @@ import java.util.Set;
 public abstract class ErlangRunConfigurationBase<RunningState extends ErlangRunningState> extends ModuleBasedConfiguration<ErlangModuleBasedConfiguration>
   implements RunConfigurationWithSuppressedDefaultRunAction {
   private ErlangDebugOptions myDebugOptions = new ErlangDebugOptions();
+  private String myWorkDirectory;
 
   public ErlangRunConfigurationBase(String name, ErlangModuleBasedConfiguration configurationModule, ConfigurationFactory factory) {
     super(name, configurationModule, factory);
@@ -53,6 +56,14 @@ public abstract class ErlangRunConfigurationBase<RunningState extends ErlangRunn
 
   public void setDebugOptions(@NotNull ErlangDebugOptions debugOptions) {
     myDebugOptions = debugOptions;
+  }
+
+  public String getWorkDirectory() {
+    return myWorkDirectory;
+  }
+
+  public void setWorkDirectory(String workDirectory) {
+    myWorkDirectory = workDirectory;
   }
 
   @Override
@@ -71,6 +82,16 @@ public abstract class ErlangRunConfigurationBase<RunningState extends ErlangRunn
   public void checkConfiguration() throws RuntimeConfigurationException {
     ErlangModuleBasedConfiguration configurationModule = getConfigurationModule();
     configurationModule.checkForWarning();
+    checkWorkDirectory();
+  }
+
+  private void checkWorkDirectory() throws RuntimeConfigurationError {
+    if (myWorkDirectory != null && !myWorkDirectory.isEmpty()) {
+      File dir = new File(myWorkDirectory);
+      if (!dir.isDirectory()) {
+        throw new RuntimeConfigurationError("Incorrect path to working directory.");
+      }
+    }
   }
 
   @Override

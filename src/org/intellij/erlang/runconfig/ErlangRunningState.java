@@ -87,6 +87,8 @@ public abstract class ErlangRunningState extends CommandLineState {
 
   public abstract ErlangEntryPoint getEntryPoint() throws ExecutionException;
 
+  public abstract String getWorkDirectory();
+
   public ErlangEntryPoint getDebugEntryPoint() throws ExecutionException {
     return getEntryPoint();
   }
@@ -105,7 +107,13 @@ public abstract class ErlangRunningState extends CommandLineState {
   }
 
   public final void setWorkDirectory(GeneralCommandLine commandLine) {
-    commandLine.withWorkDirectory(myModule.getProject().getBasePath());
+    String workDirectory = getWorkDirectory();
+    if (workDirectory == null || workDirectory.isEmpty() ) {
+      commandLine.withWorkDirectory(myModule.getProject().getBasePath());
+    }else{
+      commandLine.withWorkDirectory(workDirectory);
+    }
+
   }
 
   public final void setStopErlang(GeneralCommandLine commandLine) {
