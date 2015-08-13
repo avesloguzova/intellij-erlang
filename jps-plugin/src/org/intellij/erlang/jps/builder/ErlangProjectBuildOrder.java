@@ -19,21 +19,21 @@ package org.intellij.erlang.jps.builder;
 import com.intellij.util.containers.ContainerUtil;
 import com.intellij.util.xmlb.annotations.AbstractCollection;
 import com.intellij.util.xmlb.annotations.Tag;
+import org.jetbrains.annotations.NotNull;
 
 import java.util.List;
 
-@Tag("compilationOrder")
-public class ErlangModuleBuildOrders {
+@Tag("dependenciesTree")
+public class ErlangProjectBuildOrder {
+  @Tag("files")
+  @AbstractCollection(surroundWithTag = false, elementTag = "file")
+  public List<ErlangFileDescriptor> myNodes = ContainerUtil.newArrayList();
+
   @SuppressWarnings("unused") // reflection
-  public ErlangModuleBuildOrders() {
-    myModuleBuildOrderDescriptors = ContainerUtil.newArrayList();
+  public ErlangProjectBuildOrder() {
   }
 
-  public ErlangModuleBuildOrders(int descriptorsCount) {
-    myModuleBuildOrderDescriptors = ContainerUtil.newArrayListWithCapacity(descriptorsCount);
+  public ErlangProjectBuildOrder(@NotNull List<ErlangFileDescriptor> topologicallySortedErlangFilesDescriptors) {
+    myNodes = topologicallySortedErlangFilesDescriptors;
   }
-
-  @Tag("intellijModules")
-  @AbstractCollection(surroundWithTag = false)
-  public List<ErlangModuleBuildOrderDescriptor> myModuleBuildOrderDescriptors;
 }

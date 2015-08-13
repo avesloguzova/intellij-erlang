@@ -18,21 +18,18 @@ package org.intellij.erlang.jps.builder;
 
 import com.intellij.util.containers.ContainerUtil;
 import com.intellij.util.xmlb.annotations.AbstractCollection;
-import com.intellij.util.xmlb.annotations.Attribute;
 import com.intellij.util.xmlb.annotations.Tag;
 
 import java.util.List;
 
 @Tag("module")
-public class ErlangModuleBuildOrderDescriptor {
-  @Attribute("name")
-  public String myModuleName = "";
-
+public class ErlangModuleBuildOrder {
+  public static final ErlangModuleBuildOrder EMPTY = new ErlangModuleBuildOrder();
   @Tag("erlangModules")
-  @AbstractCollection(surroundWithTag = false)
-  public List<ErlangFileDescriptor> myOrderedErlangFilePaths = ContainerUtil.newArrayList();
+  @AbstractCollection(surroundWithTag = false, elementTag = "filePath")
+  public List<String> myOrderedErlangFilePaths = ContainerUtil.newArrayList();
 
   @Tag("testErlangModules")
-  @AbstractCollection(surroundWithTag = false)
-  public List<ErlangFileDescriptor> myOrderedErlangTestFilePaths = ContainerUtil.newArrayList();
+  @AbstractCollection(surroundWithTag = false, elementTag = "filePath")
+  public List<String> myOrderedErlangTestFilePaths = ContainerUtil.newArrayList();
 }
