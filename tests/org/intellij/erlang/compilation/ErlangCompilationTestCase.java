@@ -25,6 +25,7 @@ public class ErlangCompilationTestCase extends TestCase {
     TestSuite suite = new TestSuite();
     suite.addTestSuite(ErlangBuildTest.class);
     suite.addTestSuite(ErlangRebuildInSingleModuleTest.class);
+    suite.addTestSuite(ErlangRebuildInDifferentModuleTest.class);
     return suite;
   }
 }
