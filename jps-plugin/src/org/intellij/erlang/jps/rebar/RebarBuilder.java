@@ -21,7 +21,9 @@ import com.intellij.execution.configurations.GeneralCommandLine;
 import com.intellij.execution.process.BaseOSProcessHandler;
 import com.intellij.execution.process.ProcessAdapter;
 import com.intellij.openapi.util.text.StringUtil;
-import org.intellij.erlang.jps.builder.*;
+import com.intellij.util.containers.ContainerUtil;
+import org.intellij.erlang.jps.builder.ErlangSourceRootDescriptor;
+import org.intellij.erlang.jps.builder.ErlangTargetBuilderUtil;
 import org.intellij.erlang.jps.model.ErlangCompilerOptions;
 import org.intellij.erlang.jps.model.JpsErlangCompilerOptionsExtension;
 import org.intellij.erlang.jps.model.JpsErlangSdkType;
@@ -41,63 +43,40 @@ import org.jetbrains.jps.model.module.JpsModule;
 
 import java.io.File;
 import java.io.IOException;
+import java.net.MalformedURLException;
 import java.net.URL;
 import java.nio.charset.Charset;
 import java.util.Collections;
 
-public class RebarBuilder extends TargetBuilder<ErlangSourceRootDescriptor, ErlangTarget> {
+public class RebarBuilder extends TargetBuilder<ErlangSourceRootDescriptor, RebarTarget> {
+  public static final String CONFIGURATION_PATH = "rebar-builder/";
+  public static final String CONFIG_FILE_SUFFIX = "_rebar.config";
   private static final String NAME = "rebar";
-  private static final String REBAR_CONFIG_FILE_NAME = "rebar.config";
 
   public RebarBuilder() {
-    super(Collections.singleton(ErlangTargetType.INSTANCE));
-  }
-
-  @Override
-  public void build(@NotNull ErlangTarget target,
-                    @NotNull DirtyFilesHolder<ErlangSourceRootDescriptor, ErlangTarget> holder,
-                    @NotNull BuildOutputConsumer outputConsumer,
-                    @NotNull CompileContext context) throws ProjectBuildException, IOException {
-    if (!holder.hasDirtyFiles() && !holder.hasRemovedFiles()) return;
-
-    JpsModule module = target.getModule();
-    JpsProject project = module.getProject();
-    ErlangCompilerOptions compilerOptions = JpsErlangCompilerOptionsExtension.getOrCreateExtension(project).getOptions();
-    if (!compilerOptions.myUseRebarCompiler) return;
-
-    String rebarPath = getRebarExecutablePath(project);
-    if (rebarPath == null) {
-      String errorMessage = "Rebar path is not set";
-      context.processMessage(new CompilerMessage(NAME, BuildMessage.Kind.ERROR, errorMessage));
-      throw new ProjectBuildException(errorMessage);
-    }
-
-    JpsSdk<JpsDummyElement> sdk = ErlangTargetBuilderUtil.getSdk(context, module);
-    String escriptPath = JpsErlangSdkType.getScriptInterpreterExecutable(sdk.getHomePath()).getAbsolutePath();
-    boolean isRebarRun = false;
-    for (String contentRootUrl : module.getContentRootsList().getUrls()) {
-      String contentRootPath = new URL(contentRootUrl).getPath();
-      File contentRootDir = new File(contentRootPath);
-      File rebarConfigFile = new File(contentRootDir, REBAR_CONFIG_FILE_NAME);
-      if (!rebarConfigFile.exists()) continue;
-      runRebar(escriptPath, rebarPath, contentRootPath, compilerOptions.myAddDebugInfoEnabled, context);
-      isRebarRun = true;
-    }
-    if (!isRebarRun) {
-      String messageText = "Skipped module \'" + module.getName() + "\' because rebar.config is not found.";
-      context.processMessage(new CompilerMessage(NAME, BuildMessage.Kind.INFO, messageText));
-    }
+    super(Collections.singleton(RebarTargetType.INSTANCE));
   }
 
   @NotNull
-  @Override
-  public String getPresentableName() {
-    return NAME;
+  private static String getContentRootPath(@NotNull JpsModule module) throws MalformedURLException {
+    assert module.getContentRootsList().getUrls().size() == 1;
+    String contentRootUrl = ContainerUtil.getFirstItem(module.getContentRootsList().getUrls());
+    assert contentRootUrl != null;
+    return new URL(contentRootUrl).getPath();
+  }
+
+  @Nullable
+  private static String getConfigFilePath(@NotNull JpsModule module, @NotNull CompileContext context) {
+    File dataStorageRoot = context.getProjectDescriptor().dataManager.getDataPaths().getDataStorageRoot();
+    File configDir = new File(dataStorageRoot, CONFIGURATION_PATH);
+    File configFile = new File(configDir, module.getName() + CONFIG_FILE_SUFFIX);
+    return configFile.exists() ? configFile.getAbsolutePath() : null;
   }
 
   private static void runRebar(@NotNull String escriptPath,
                                @NotNull String rebarPath,
                                @Nullable String contentRootPath,
+                               @Nullable String configFilePath,
                                boolean addDebugInfo,
                                @NotNull CompileContext context) throws ProjectBuildException {
     GeneralCommandLine commandLine = new GeneralCommandLine();
@@ -106,6 +85,9 @@ public class RebarBuilder extends TargetBuilder<ErlangSourceRootDescriptor, Erla
     commandLine.addParameter(rebarPath);
     commandLine.addParameter("compile");
 
+    if (configFilePath != null) {
+      commandLine.addParameters("-C", configFilePath);
+    }
     if (addDebugInfo) {
       commandLine.getEnvironment().put("ERL_FLAGS", "+debug_info");
     }
@@ -132,5 +114,38 @@ public class RebarBuilder extends TargetBuilder<ErlangSourceRootDescriptor, Erla
     JpsRebarConfigurationExtension rebarConfigurationExtension = JpsRebarConfigurationExtension.getExtension(project);
     String rebarPath = rebarConfigurationExtension != null ? rebarConfigurationExtension.getRebarPath() : null;
     return StringUtil.isEmptyOrSpaces(rebarPath) ? null : rebarPath;
+  }
+
+  @Override
+  public void build(@NotNull RebarTarget target,
+                    @NotNull DirtyFilesHolder<ErlangSourceRootDescriptor, RebarTarget> holder,
+                    @NotNull BuildOutputConsumer outputConsumer,
+                    @NotNull CompileContext context) throws ProjectBuildException, IOException {
+    if (!holder.hasDirtyFiles() && !holder.hasRemovedFiles()) return;
+
+    JpsModule module = target.getModule();
+    JpsProject project = module.getProject();
+    ErlangCompilerOptions compilerOptions = JpsErlangCompilerOptionsExtension.getOrCreateExtension(project).getOptions();
+
+    String rebarPath = getRebarExecutablePath(project);
+    if (rebarPath == null) {
+      String errorMessage = "Rebar path is not set";
+      context.processMessage(new CompilerMessage(NAME, BuildMessage.Kind.ERROR, errorMessage));
+      throw new ProjectBuildException(errorMessage);
+    }
+
+    JpsSdk<JpsDummyElement> sdk = ErlangTargetBuilderUtil.getSdk(context, module);
+    String escriptPath = JpsErlangSdkType.getScriptInterpreterExecutable(sdk.getHomePath()).getAbsolutePath();
+    String contentRootPath = getContentRootPath(module);
+    String configFilePath = getConfigFilePath(module, context);
+
+    runRebar(escriptPath, rebarPath, contentRootPath, configFilePath, compilerOptions.myAddDebugInfoEnabled, context);
+
+  }
+
+  @NotNull
+  @Override
+  public String getPresentableName() {
+    return NAME;
   }
 }

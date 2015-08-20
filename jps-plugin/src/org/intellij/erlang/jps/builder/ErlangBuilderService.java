@@ -18,6 +18,7 @@ package org.intellij.erlang.jps.builder;
 
 import com.intellij.util.containers.ContainerUtil;
 import org.intellij.erlang.jps.rebar.RebarBuilder;
+import org.intellij.erlang.jps.rebar.RebarTargetType;
 import org.jetbrains.annotations.NotNull;
 import org.jetbrains.jps.builders.BuildTargetType;
 import org.jetbrains.jps.incremental.BuilderService;
@@ -29,7 +30,8 @@ public class ErlangBuilderService extends BuilderService {
   @NotNull
   @Override
   public List<? extends BuildTargetType<?>> getTargetTypes() {
-    return ContainerUtil.newArrayList(ErlangPrepareDependenciesTargetType.INSTANCE, ErlangTargetType.INSTANCE);
+    return ContainerUtil.newArrayList(ErlangPrepareDependenciesTargetType.INSTANCE, ErlangTargetType.INSTANCE, RebarTargetType.INSTANCE);
+
   }
 
   @NotNull
